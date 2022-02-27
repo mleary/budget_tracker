@@ -1,0 +1,73 @@
+---
+title: "Exploration"
+author: "Matt Leary"
+date: "2/26/2022"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+## Setup
+
+```{r, warning=FALSE, message=FALSE}
+
+library(dplyr)
+library(RSQLite)
+library(lubridate)
+```
+
+
+
+## Get new data 
+
+Note: look at keeping file names, mapping over usaa with two files
+
+```{r}
+
+df_usaa <- read.csv("./data/usaa-chuck.csv", header = F) %>% 
+  rbind( read.csv("./data/usaa-checking.csv", header = F)) %>% 
+  filter(V1 == 'posted') %>% 
+  rename(trans_day=V3, description=V5, category=V6, amount=V7) %>% 
+  select(description, category, amount, trans_day) %>% 
+  mutate(
+    trans_day  = lubridate::as_date(trans_day, format='%m/%d/%Y'),
+    trans_week = lubridate::floor_date(trans_day, unit = "week"),
+    trans_mon  = lubridate::floor_date(trans_day, unit = "month"),
+    amount = as.integer(stringr::str_remove(amount, '--'))
+  )
+
+df_cap_one <- read.csv("./data/capone.csv", header = T) %>% 
+  mutate(amount=coalesce(-Debit, Credit)) %>%
+  rename(trans_day=Transaction.Date, description=Description, category=Category) %>% 
+  select(description, category, amount, trans_day) %>% 
+  mutate(
+    trans_day  = lubridate::as_date(trans_day),
+    trans_week = lubridate::floor_date(trans_day, unit = "week"),
+    trans_mon  = lubridate::floor_date(trans_day, unit = "month")
+  )
+
+df_chase <- read.csv("./data/Chase1018_Activity20210901_20220226_20220226.CSV", header = T) %>% 
+  rename(trans_day=Transaction.Date, description=Description, category=Category, amount=Amount) %>% 
+  select(description, category, amount, trans_day) %>% 
+  mutate(
+    trans_day  = lubridate::as_date(trans_day, format='%m/%d/%Y'),
+    trans_week = lubridate::floor_date(trans_day, unit = "week"),
+    trans_mon  = lubridate::floor_date(trans_day, unit = "month")
+  )
+
+df_all <- rbind(
+  data.frame(id = "usaa", df_usaa),
+  data.frame(id = "cap-one", df_cap_one),
+  data.frame(id = "chase", df_chase)
+)
+```
+
+## Data exploration
+
+```{r}
+
+df_all %>% 
+  count(category)
+
+```
+
